@@ -20,7 +20,7 @@ DIGITS_LOOKUP = {
 }
 
 # load the example image
-image = cv2.imread("data/example.jpg")
+image = cv2.imread("data/sample_00.jpg")
 
 # pre-process the image by resizing it, converting it to
 # graycale, blurring it, and computing an edge map
@@ -31,6 +31,7 @@ edged = cv2.Canny(blurred, 50, 200, 255)
 
 # find contours in the edge map, then sort them by their
 # size in descending order
+cv2.imshow('edge', edged)
 cnts = cv2.findContours(edged.copy(), cv2.RETR_EXTERNAL,
                         cv2.CHAIN_APPROX_SIMPLE)
 cnts = cnts[0] if imutils.is_cv2() else cnts[1]
@@ -56,15 +57,13 @@ output = four_point_transform(image, displayCnt.reshape(4, 2))
 
 # threshold the warped image, then apply a series of morphological
 # operations to cleanup the thresholded image
-thresh = cv2.threshold(warped, 0, 255,
-                       cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
+thresh = cv2.threshold(warped, 0, 255, cv2.THRESH_BINARY_INV | cv2.THRESH_OTSU)[1]
 kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (1, 5))
 thresh = cv2.morphologyEx(thresh, cv2.MORPH_OPEN, kernel)
 
 # find contours in the thresholded image, then initialize the
 # digit contours lists
-cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL,
-                        cv2.CHAIN_APPROX_SIMPLE)
+cnts = cv2.findContours(thresh.copy(), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
 cnts = cnts[0] if imutils.is_cv2() else cnts[1]
 digitCnts = []
 
@@ -74,7 +73,7 @@ for c in cnts:
     (x, y, w, h) = cv2.boundingRect(c)
 
     # if the contour is sufficiently large, it must be a digit
-    if w >= 15 and (h >= 30 and h <= 40):
+    if w >= 15 and (30 <= h <= 40):
         digitCnts.append(c)
 
 # sort the contours from left-to-right, then initialize the
@@ -87,10 +86,11 @@ for c in digitCnts:
     # extract the digit ROI
     (x, y, w, h) = cv2.boundingRect(c)
     roi = thresh[y:y + h, x:x + w]
-
+    cv2.imshow('roi', roi)
     # compute the width and height of each of the 7 segments
     # we are going to examine
     (roiH, roiW) = roi.shape
+    print(roiH,roiW)
     (dW, dH) = (int(roiW * 0.25), int(roiH * 0.15))
     dHC = int(roiH * 0.05)
 
@@ -124,8 +124,7 @@ for c in digitCnts:
     digit = DIGITS_LOOKUP[tuple(on)]
     digits.append(digit)
     cv2.rectangle(output, (x, y), (x + w, y + h), (0, 255, 0), 1)
-    cv2.putText(output, str(digit), (x - 10, y - 10),
-                cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
+    cv2.putText(output, str(digit), (x - 10, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
 
 # display the digits
 print(u"{}{}.{} \u00b0C".format(*digits))
