@@ -146,6 +146,33 @@ def inference(image_path):
         cv2.destroyAllWindows()
 
 
+def inference_2(image_path):
+    im = cv2.imread(image_path)
+    row, col, _ = im.shape
+    gray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
+    roi = cv2.threshold(gray, 50, 255, cv2.THRESH_BINARY_INV)[1]
+    edged = cv2.Canny(roi, 50, 200, 255)
+
+    kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (5, 5))
+    closed = cv2.morphologyEx(edged, cv2.MORPH_CLOSE, kernel)
+    _, cnts, hierarchy = cv2.findContours(closed.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+    filtered = filter_contours(cnts, min_rect=(20, 45), max_rect=(int(row * 0.8), int(col * 0.8)))
+    filtered = sorted(filtered, key=lambda c: cv2.boundingRect(c)[0])
+    digits = []
+    for (i, f) in enumerate(filtered):
+        x, y, w, h = cv2.boundingRect(f)
+        print(x, y, w, h)
+        digit = rec(im[y:y + h, x:x + w])
+        digits += digit
+        cv2.rectangle(im, (x, y), (x + w, y + h), (0, 255, 0), 1)
+        cv2.putText(im, str(*digit), (x, y), cv2.FONT_HERSHEY_SIMPLEX, 0.65, (0, 255, 0), 2)
+    print(u"{}{}.{} \u00b0C".format(*digits))
+    cv2.imshow('edge', im)
+    k = cv2.waitKey(0)
+    if k == 27:
+        cv2.destroyAllWindows()
+
+
 if __name__ == '__main__':
     image = os.path.join(os.path.dirname(__file__), 'data/sample_00.jpg')
-    inference(image)
+    inference_2(image)
